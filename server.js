@@ -6,7 +6,11 @@ const app = express();
 const PORT = 3000;
 
 // WebSocket Server
-const wss = new WebSocket.Server({ port: 3001 });
+// const wss = new WebSocket.Server({ port: 3001 });
+
+
+
+
 
 // Middleware
 app.use(bodyParser.text());
@@ -74,3 +78,5 @@ app.post("/nmea", (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server is running at http://localhost:${PORT}`);
 });
+
+const wss = new WebSocket.Server({ server });
