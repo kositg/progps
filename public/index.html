@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Live Map (Leaflet)</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <style>
+        #map {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Live GPS Map (Leaflet)</h1>
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map = L.map('map').setView([14.0, 100.0], 12);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        let marker = L.marker([14.0, 100.0]).addTo(map)
+            .bindPopup("Waiting for GPS data...")
+            .openPopup();
+
+        function connectWebSocket() {
+
+            const ws = new WebSocket("ws://localhost:3001");
+          
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log("📡 New GPS Data:", data);
+
+                if (data.latitude && data.longitude) {
+                    const newPosition = { lat: data.latitude, lng: data.longitude };
+                    marker.setLatLng(newPosition);
+                    map.setView(newPosition, 12);
+                    marker.getPopup().setContent(`📍 Lat: ${data.latitude}, Lng: ${data.longitude}, Speed: ${data.speed_knots} knots`);
+                    marker.openPopup();
+                }
+            };
+        }
+
+        connectWebSocket();
+    </script>
+
+</body>
+</html>
