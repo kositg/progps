@@ -19,7 +19,7 @@
 
 <body>
 
-    <h1>Live GPS Map (Leaflet)</h1>
+    <h1>Live GPS Map (AITS-RUT956)</h1>
     <div id="map"></div>
 
     <!-- Leaflet JS -->
@@ -57,7 +57,7 @@
                     marker.getPopup().setContent(`📍 Lat: ${data.latitude}, Lng: ${data.longitude}, Speed: ${data.speed_knots} km/h, Time: ${data.time}`);
                     marker.openPopup();
                 }else{
-                    console.log("have no lat, lng")
+                    console.log("Invalid lat, lng")
                 }
             };
 
