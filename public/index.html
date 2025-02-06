@@ -54,7 +54,7 @@
                     const newPosition = { lat: data.latitude, lng: data.longitude };
                     marker.setLatLng(newPosition);
                     map.setView(newPosition, 12);
-                    marker.getPopup().setContent(`📍 Lat: ${data.latitude}, Lng: ${data.longitude}, Speed: ${data.speed_knots} knots`);
+                    marker.getPopup().setContent(`📍 Lat: ${data.latitude}, Lng: ${data.longitude}, Speed: ${data.speed_knots} km/h, Time: ${data.time}`);
                     marker.openPopup();
                 }
             };

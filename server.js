@@ -27,6 +27,21 @@ function convertToDecimal(coord, direction) {
     return decimal.toFixed(6); // ลดความละเอียดให้เหมาะสม
 }
 
+function convertNmeaTime(nmeaTime) {
+    if (!nmeaTime || isNaN(parseFloat(nmeaTime))) return "Invalid Time";
+
+    let timeStr = nmeaTime.toString().padStart(6, '0'); // เติม 0 ถ้าสั้นเกินไป
+
+    let hours = parseInt(timeStr.slice(0, 2), 10);
+    let minutes = parseInt(timeStr.slice(2, 4), 10);
+    let seconds = parseInt(timeStr.slice(4, 6), 10);
+
+    // เพิ่ม 7 ชั่วโมง (UTC+7)
+    hours = (hours + 7) % 24; // ป้องกันค่าเกิน 24 ชั่วโมง
+
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}
+
 
 function parseNmeaSentences(nmeaData) {
     if (typeof nmeaData !== "string") {
@@ -43,7 +58,7 @@ function parseNmeaSentences(nmeaData) {
         if (sentence.startsWith("$GPRMC")) {
             gpsData = {
                 type: "GPRMC",
-                time: fields[1] || "Unknown",
+                time: convertNmeaTime(fields[1]) || "Unknown",
                 status: fields[2] === "A" ? "Valid" : "Invalid", // ตรวจสอบว่า GPS ใช้งานได้ไหม
                 latitude: convertToDecimal(fields[3], fields[4]) || null,
                 longitude: convertToDecimal(fields[5], fields[6]) || null,
@@ -54,7 +69,7 @@ function parseNmeaSentences(nmeaData) {
         } else if (sentence.startsWith("$GPGGA")) {
             gpsData = {
                 type: "GPGGA",
-                time: fields[1] || "Unknown",
+                time: convertNmeaTime(fields[1]) || "Unknown",
                 latitude: convertToDecimal(fields[2], fields[3]) || null,
                 longitude: convertToDecimal(fields[4], fields[5]) || null,
                 fix_quality: parseInt(fields[6], 10) || 0, // ค่า Fix Quality (0 = ไม่มีสัญญาณ)
