@@ -95,22 +95,43 @@ app.post("/nmea", (req, res) => {
 
     const parsedData = parseNmeaSentences(nmeaData);
 
-    // ✅ ตรวจสอบว่า GPS Fix มีค่ามากกว่า 0 (สัญญาณใช้งานได้)
-    if (parsedData.fix_quality > 0 || (parsedData.latitude && parsedData.longitude)) {
-        console.log("📡 Received GPS Data:", parsedData);
+//     // ✅ ตรวจสอบว่า GPS Fix มีค่ามากกว่า 0 (สัญญาณใช้งานได้)
+//     if (parsedData.fix_quality > 0 || (parsedData.latitude && parsedData.longitude)) {
+//         console.log("📡 Received GPS Data:", parsedData);
 
-        wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(JSON.stringify(parsedData));
-            }
-        });
+//         wss.clients.forEach(client => {
+//             if (client.readyState === WebSocket.OPEN) {
+//                 client.send(JSON.stringify(parsedData));
+//             }
+//         });
 
-        res.status(200).json(parsedData);
-    } else {
-        console.warn("⚠️ No valid GPS fix");
-        res.status(400).send("No valid GPS data found");
+//         res.status(200).json(parsedData);
+//     } else {
+//         console.warn("⚠️ No valid GPS fix");
+//         res.status(400).send("No valid GPS data found");
+//     }
+// });
+
+if (parsedData.fix_quality > 0 || (parsedData.latitude && parsedData.longitude)) {
+    console.log("📡 Received GPS Data (Valid Fix):", parsedData);
+} else {
+    console.warn("⚠️ No valid GPS fix, but sending data for debugging:", parsedData);
+}
+
+// ✅ ส่งข้อมูลไปยัง WebSocket ไม่ว่าจะมี GPS Fix หรือไม่
+wss.clients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(parsedData));
     }
 });
+
+// ✅ ตอบกลับ HTTP Response ตามสถานะ
+if (parsedData.fix_quality > 0 || (parsedData.latitude && parsedData.longitude)) {
+    res.status(200).json(parsedData);
+} else {
+    res.status(200).json({ message: "No valid GPS fix, but data received", data: parsedData });
+} });
+
 
 
 wss.on("connection", (ws) => {
