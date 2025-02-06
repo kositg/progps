@@ -13,18 +13,20 @@ app.use(bodyParser.text({ type: "*/*" })); // รองรับทั้ง tex
 app.use(express.static("public"));
 
 function convertToDecimal(coord, direction) {
-    if (!coord || isNaN(coord)) return null;
-    
-    const deg = parseInt(coord.slice(0, -7), 10);
-    const minutes = parseFloat(coord.slice(-7));
-    
-    if (isNaN(deg) || isNaN(minutes)) return null;
-    
-    let decimal = deg + minutes / 60;
-    if (direction === "S" || direction === "W") decimal *= -1;
+    if (!coord || isNaN(parseFloat(coord))) return null;
 
-    return decimal.toFixed(6); // ลดความละเอียดเพื่อให้ใช้ในระบบแผนที่ได้ง่ายขึ้น
+    coord = parseFloat(coord); // แปลงเป็นตัวเลขก่อน
+    
+    let degrees = Math.floor(coord / 100); // ดึงค่าองศา
+    let minutes = coord % 100; // ดึงค่านาที
+    
+    let decimal = degrees + (minutes / 60); // คำนวณเป็นทศนิยม
+
+    if (direction === "S" || direction === "W") decimal *= -1; // ซีกโลกใต้หรือตะวันตกเป็นลบ
+
+    return decimal.toFixed(6); // ลดความละเอียดให้เหมาะสม
 }
+
 
 function parseNmeaSentences(nmeaData) {
     if (typeof nmeaData !== "string") {
