@@ -2,13 +2,24 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const WebSocket = require("ws");
 
+// const app = express();
+// const PORT = 3000;
+
+// // WebSocket Server
+// const wss = new WebSocket.Server({ port: 3001 });
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Render จะกำหนดให้ใช้ PORT จาก Environment
 
-// สร้าง HTTP Server และ WebSocket Server ในพอร์ตเดียวกัน
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+// สร้าง WebSocket Server บนพอร์ตที่ปลอดภัย
+const server = app.listen(PORT, () => {
+    console.log(`🚀 Server is running on port ${PORT}`);
+});
+
+const WSS_PORT = 10001; // Render อนุญาตให้ใช้พอร์ต 10000+
+const wss = new WebSocket.Server({ port: WSS_PORT }, () => {
+    console.log(`📡 WebSocket Server running on port ${WSS_PORT}`);
+});
 
 
 // Middleware
@@ -73,20 +84,9 @@ app.post("/nmea", (req, res) => {
     }
 });
 
-// WebSocket Connection
-wss.on("connection", (ws) => {
-    console.log("🔗 Client connected");
+// // Start Server
+// app.listen(PORT, () => {
+//     console.log(`🚀 Server is running at http://localhost:${PORT}`);
+// });
 
-    ws.on("message", (message) => {
-        console.log("📨 Received message:", message);
-    });
-
-    ws.on("close", () => {
-        console.log("❌ Client disconnected");
-    });
-});
-
-// Start Server
-server.listen(PORT, () => {
-    console.log(`🚀 Server is running on port ${PORT}`);
-});
+// // const wss = new WebSocket.Server({ server });
