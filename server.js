@@ -66,6 +66,7 @@ function parseNmeaSentences(nmeaData) {
 }
 
 app.post("/nmea", (req, res) => {
+    console.log(req.body);
     let nmeaData = req.body;
 
     if (!nmeaData) {
