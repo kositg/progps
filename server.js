@@ -42,9 +42,9 @@ function parseNmeaSentences(nmeaData) {
             gpsData = {
                 type: "GPRMC",
                 time: fields[1] || "Unknown",
-                status: fields[2] === "A" ? "Valid" : "Invalid",
-                latitude: convertToDecimal(fields[3], fields[4]),
-                longitude: convertToDecimal(fields[5], fields[6]),
+                status: fields[2] === "A" ? "Valid" : "Invalid", // ตรวจสอบว่า GPS ใช้งานได้ไหม
+                latitude: convertToDecimal(fields[3], fields[4]) || null,
+                longitude: convertToDecimal(fields[5], fields[6]) || null,
                 speed_knots: parseFloat(fields[7]) || 0.0,
                 course: parseFloat(fields[8]) || 0.0,
                 date: fields[9] || "Unknown"
@@ -53,20 +53,23 @@ function parseNmeaSentences(nmeaData) {
             gpsData = {
                 type: "GPGGA",
                 time: fields[1] || "Unknown",
-                latitude: convertToDecimal(fields[2], fields[3]),
-                longitude: convertToDecimal(fields[4], fields[5]),
-                fix_quality: fields[6] || "0",
+                latitude: convertToDecimal(fields[2], fields[3]) || null,
+                longitude: convertToDecimal(fields[4], fields[5]) || null,
+                fix_quality: parseInt(fields[6], 10) || 0, // ค่า Fix Quality (0 = ไม่มีสัญญาณ)
                 satellites: parseInt(fields[7], 10) || 0,
                 altitude: parseFloat(fields[9]) || 0.0
             };
         }
     });
 
+    console.log("📡 Parsed GPS Data:", gpsData); // เพิ่ม log เพื่อตรวจสอบข้อมูล
     return gpsData;
 }
 
+
 app.post("/nmea", (req, res) => {
     console.log(req.body);
+    
     let nmeaData = req.body;
 
     if (!nmeaData) {
@@ -75,7 +78,8 @@ app.post("/nmea", (req, res) => {
 
     const parsedData = parseNmeaSentences(nmeaData);
 
-    if (parsedData.latitude && parsedData.longitude) {
+    // ✅ ตรวจสอบว่า GPS Fix มีค่ามากกว่า 0 (สัญญาณใช้งานได้)
+    if (parsedData.fix_quality > 0 || (parsedData.latitude && parsedData.longitude)) {
         console.log("📡 Received GPS Data:", parsedData);
 
         wss.clients.forEach(client => {
@@ -86,9 +90,11 @@ app.post("/nmea", (req, res) => {
 
         res.status(200).json(parsedData);
     } else {
+        console.warn("⚠️ No valid GPS fix");
         res.status(400).send("No valid GPS data found");
     }
 });
+
 
 wss.on("connection", (ws) => {
     console.log("🔗 Client connected");
