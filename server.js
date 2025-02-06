@@ -3,20 +3,16 @@ const bodyParser = require("body-parser");
 const WebSocket = require("ws");
 const http = require("http");
 
-
 const app = express();
-const PORT = process.env.PORT || 3000; // Render จะกำหนดให้ใช้ PORT จาก Environment
+const PORT = process.env.PORT || 3000;
 
-// สร้าง HTTP Server และ WebSocket Server ในพอร์ตเดียวกัน
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-
-// Middleware
 app.use(bodyParser.text());
+app.use(bodyParser.json());
 app.use(express.static("public"));
 
-// ฟังก์ชันแปลงพิกัด NMEA เป็นทศนิยม
 function convertToDecimal(coord, direction) {
     if (!coord) return null;
     const deg = parseInt(coord.slice(0, -7));
@@ -26,8 +22,12 @@ function convertToDecimal(coord, direction) {
     return decimal;
 }
 
-// ฟังก์ชันอ่านหลายประโยค NMEA และดึงค่าที่ต้องการ
 function parseNmeaSentences(nmeaData) {
+    if (typeof nmeaData !== "string") {
+        console.error("Invalid NMEA data type:", typeof nmeaData);
+        return {};
+    }
+
     const lines = nmeaData.split("\n");
     let gpsData = {};
 
@@ -45,23 +45,30 @@ function parseNmeaSentences(nmeaData) {
                 course: parseFloat(fields[8]) || 0.0,
                 date: fields[9]
             };
-        } else if (sentence.startsWith("$GPGGA")) {
-            gpsData.altitude = parseFloat(fields[9]) || 0.0;
         }
     });
-
+    
     return gpsData;
 }
 
-// รับข้อมูล NMEA ผ่าน HTTP POST และส่งไปยัง WebSocket
 app.post("/nmea", (req, res) => {
-    const nmeaData = req.body;
+    let nmeaData = req.body;
+    
+    // ถ้า req.body เป็น Object (เช่น JSON) ให้แปลงเป็น string
+    if (typeof nmeaData !== "string") {
+        try {
+            nmeaData = JSON.stringify(nmeaData);
+        } catch (err) {
+            console.error("Error parsing request body:", err);
+            return res.status(400).send("Invalid data format");
+        }
+    }
+
     const parsedData = parseNmeaSentences(nmeaData);
 
     if (parsedData.latitude && parsedData.longitude) {
         console.log("📡 Received GPS Data:", parsedData);
 
-        // ส่งข้อมูลให้ Client ผ่าน WebSocket
         wss.clients.forEach(client => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify(parsedData));
@@ -74,7 +81,6 @@ app.post("/nmea", (req, res) => {
     }
 });
 
-// WebSocket Connection
 wss.on("connection", (ws) => {
     console.log("🔗 Client connected");
 
@@ -87,7 +93,6 @@ wss.on("connection", (ws) => {
     });
 });
 
-// Start Server
 server.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
 });
