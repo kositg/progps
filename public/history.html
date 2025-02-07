@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS History Map</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <!-- FontAwesome (ใช้สำหรับไอคอน) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- เชื่อมต่อไฟล์ CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        #map {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>History Map (AITS-RUT956)</h1>
+    <div class="button-container">
+        <!-- ปุ่มใช้ FontAwesome -->
+        <button class="history-button" onclick="fetchGPSHistory()">
+            <i class="fa-solid fa-timeline"></i> View GPS History
+        </button>
+
+        <!-- ปุ่มใช้ SVG -->
+        <button class="history-button" onclick="backToreal()">
+            <i class="fa-solid fa-signal"></i>
+            Realtime
+        </button>
+    </div>
+
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map = L.map('map').setView([14.0, 100.0], 8);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        let markers = [];
+
+        async function fetchGPSHistory() {
+            try {
+                const response = await fetch("/gps-history");
+                const data = await response.json();
+
+                if (!Array.isArray(data) || data.length === 0) {
+                    console.warn("⚠️ No GPS history data found");
+                    return;
+                }
+
+                // ลบ Marker เก่าทั้งหมดก่อนอัปเดตใหม่
+                markers.forEach(marker => map.removeLayer(marker));
+                markers = [];
+
+                data.forEach((point, index) => {
+                    if (point.latitude && point.longitude) {
+                        let marker = L.marker([point.latitude, point.longitude])
+                            .addTo(map)
+                            .bindPopup(`📍 Lat: ${point.latitude}, Lng: ${point.longitude}<br>🕒 Time: ${point.time}<br>🚀 Speed: ${point.speed_knots} knots`);
+                        markers.push(marker);
+
+                        // เลื่อนแผนที่ไปที่จุดล่าสุด
+                        if (index === 0) {
+                            map.setView([point.latitude, point.longitude], 12);
+                        }
+                    }
+                });
+
+                console.log("📡 GPS history updated:", data);
+            } catch (error) {
+                console.error("❌ Error fetching GPS history:", error);
+            }
+        }
+
+        // ✅ ฟังก์ชันกดปุ่มแล้วลิงก์ไปหน้า history.html
+        function backToreal() {
+            window.location.href = "index.html";
+        }
+
+        // โหลดข้อมูลทันทีที่เปิดหน้า
+        fetchGPSHistory();
+    </script>
+
+</body>
+
+</html>

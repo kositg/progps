@@ -9,10 +9,21 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 
+    <!-- FontAwesome (ใช้สำหรับไอคอน) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <!-- เชื่อมต่อไฟล์ CSS -->
+    <link rel="stylesheet" href="style.css">
+
+
     <style>
         #map {
             width: 100%;
             height: 500px;
+        }
+
+        .button-container {
+            margin: 10px 0;
         }
     </style>
 </head>
@@ -20,23 +31,46 @@
 <body>
 
     <h1>Live GPS Map (AITS-RUT956)</h1>
+
+    <!-- ✅ ปุ่มลิงก์ไปยัง History -->
+    <div class="button-container">
+        <!-- <button onclick="goToHistory()">📜 View GPS History</button> -->
+
+        <button class="history-button" onclick="goToHistory()">
+            <i class="fa-solid fa-timeline"></i> View GPS History
+        </button>
+
+    </div>
+
     <div id="map"></div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        let map = L.map('map').setView([14.0, 100.0], 12);
+        let defaultPosition = { lat: 14.0, lng: 100.0 };
+        let lastKnownPosition = JSON.parse(localStorage.getItem("lastGPS")) || defaultPosition;
+
+        let map = L.map('map').setView([lastKnownPosition.lat, lastKnownPosition.lng], 12);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
 
-        let marker = L.marker([14.0, 100.0]).addTo(map)
+        let marker = L.marker([lastKnownPosition.lat, lastKnownPosition.lng]).addTo(map)
             .bindPopup("Waiting for GPS data...")
             .openPopup();
 
-        function connectWebSocket() {
+        function updateMap(position) {
+            marker.setLatLng(position);
+            map.setView(position, 12);
+            marker.getPopup().setContent(`📍 Lat: ${position.lat}, Lng: ${position.lng}, Speed: ${position.speed_knots || 0} km/h, Time: ${position.time || "Unknown"}`);
+            marker.openPopup();
 
+            // ✅ บันทึกตำแหน่งล่าสุดลง LocalStorage
+            localStorage.setItem("lastGPS", JSON.stringify(position));
+        }
+
+        function connectWebSocket() {
             const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
             const ws = new WebSocket(wsProtocol + window.location.host);
 
@@ -44,20 +78,24 @@
                 console.log("✅ WebSocket Connected");
             };
 
-
-
             ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log("📡 New GPS Data:", data);
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log("📡 New GPS Data:", data);
 
-                if (data.latitude && data.longitude) {
-                    const newPosition = { lat: data.latitude, lng: data.longitude };
-                    marker.setLatLng(newPosition);
-                    map.setView(newPosition, 12);
-                    marker.getPopup().setContent(`📍 Lat: ${data.latitude}, Lng: ${data.longitude}, Speed: ${data.speed_knots} km/h, Time: ${data.time}`);
-                    marker.openPopup();
-                }else{
-                    console.log("Invalid lat, lng")
+                    if (data.latitude && data.longitude) {
+                        const newPosition = {
+                            lat: parseFloat(data.latitude),
+                            lng: parseFloat(data.longitude),
+                            speed_knots: data.speed_knots || 0,
+                            time: data.time || "Unknown"
+                        };
+                        updateMap(newPosition);
+                    } else {
+                        console.warn("⚠️ Invalid GPS data received");
+                    }
+                } catch (error) {
+                    console.error("❌ Error parsing WebSocket data:", error);
                 }
             };
 
@@ -69,7 +107,16 @@
                 console.log("❌ WebSocket Disconnected, reconnecting...");
                 setTimeout(connectWebSocket, 3000);
             };
+        }
 
+        // ✅ ฟังก์ชันกดปุ่มแล้วลิงก์ไปหน้า history.html
+        function goToHistory() {
+            window.location.href = "history.html";
+        }
+
+        // ✅ ถ้ามีตำแหน่งล่าสุด ให้แสดงก่อนเชื่อมต่อ WebSocket
+        if (lastKnownPosition.lat && lastKnownPosition.lng) {
+            updateMap(lastKnownPosition);
         }
 
         connectWebSocket();
